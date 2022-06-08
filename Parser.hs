@@ -1,5 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# OPTIONS_GHC -Wno-missing-fields #-}
+
+module Parser (module Parser) where
 import Text.Parsec
 import Text.Parsec.Expr
 import qualified Text.Parsec.Token as Token
@@ -8,7 +10,10 @@ import Interpreter
 import Text.Parsec.Language (emptyDef)
 import Text.Parsec.String (Parser)
 
-names = words "True False If Then Else While Look XPosition YPosition Direction"
+names =
+    words
+    "True False If Then Else While Look XPosition YPosition Direction TurnRight TurnLeft Move Punch"
+
 opNames = words "&& || ! + - * / = < <= > >= =="
 
 lexerConfig = emptyDef {
@@ -56,24 +61,94 @@ intConst :: Parser Expr
 intConst = Const . IntConst <$> integer
 
 boolConst :: Parser Expr
-boolConst = 
-    do
-        Const (BoolConst True) <$ reserved "True"
-        <|> Const (BoolConst False) <$ reserved "False"
+boolConst =
+    Const (BoolConst True) <$ reserved "True"
+    <|> Const (BoolConst False) <$ reserved "False"
 
 variable :: Parser Expr
 variable = Variable <$> identifier
 
 term :: Parser Expr
 term =
-    do
-        intConst
-        <|> boolConst
-        <|> variable
-        <|> parens expression 
+    intConst
+    <|> boolConst
+    <|> variable
+    <|> parens expression
 
 expression :: Parser Expr
-expression = 
-    do
-        buildExpressionParser operationTable term
-        <|> term
+expression = buildExpressionParser operationTable term <|> term
+
+assignment :: Parser Stmt
+assignment = do
+    v0 <- identifier
+    reservedOp "=="
+    Assign v0 <$> expression
+
+seq :: Parser Stmt
+seq = do
+    s0 <- stmt
+    Seq s0 <$> stmt
+
+condition :: Parser Stmt
+condition = do
+    reserved "If"
+    e0 <- parens expression
+    reserved "Then"
+    s0 <- between (reserved "{") (reserved "}") stmt
+    reserved "Else"
+    s1 <- between (reserved "{") (reserved "}") stmt
+    return (Condition e0 s0 s1)
+
+while :: Parser Stmt
+while = do
+    reserved "While"
+    e0 <- parens expression
+    s0 <- between (reserved "{") (reserved "}") stmt
+    return (While e0 s0)
+
+turnLeftStmt :: Parser Stmt
+turnLeftStmt = do
+    reserved "TurnLeft"
+    return TurnLeftStmt
+
+turnRightStmt :: Parser Stmt
+turnRightStmt = do
+    reserved "TurnRight"
+    return TurnLeftStmt
+
+moveStmt :: Parser Stmt
+moveStmt = do
+    reserved "Move"
+    return TurnLeftStmt
+
+punchStmt :: Parser Stmt
+punchStmt = do
+    reserved "Punch"
+    return TurnLeftStmt
+
+simpleStmt :: Parser Stmt
+simpleStmt = do
+    s0 <- assignment
+        <|> turnLeftStmt
+        <|> turnRightStmt
+        <|> moveStmt
+        <|> punchStmt
+    semi
+    return s0
+
+complexStmt :: Parser Stmt
+complexStmt =
+    while
+    <|> condition
+    <|> Parser.seq
+
+stmt :: Parser Stmt
+stmt = simpleStmt <|> complexStmt
+
+parser = whiteSpace >> stmt
+
+parseString :: String -> Stmt
+parseString string =
+    case parse parser "" string of
+        Left e -> error $ show e
+        Right r -> r

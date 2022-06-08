@@ -65,7 +65,7 @@ emptyBoard :: Board
 emptyBoard =
     let
         a = replicate 4 0;
-        c = let (x : xs) = a in 1 : xs;
+        c = [1, 0, 0, -1]
         b = replicate 4 a;
     in c : b;
 
