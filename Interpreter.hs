@@ -52,7 +52,12 @@ type Direction = Integer
 
 type Board = [[Integer]]
 
-data Game = Game {board :: Board, direction :: Direction, player1Pos :: Position, player2Pos :: Position}
+data Game = Game {
+    board :: Board,
+    direction :: Direction,
+    player1Pos :: Position,
+    player2Pos :: Position
+    }
 
 
 -- #################### Game related functions ####################
