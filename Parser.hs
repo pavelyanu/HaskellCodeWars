@@ -68,6 +68,27 @@ boolConst =
 variable :: Parser Expr
 variable = Variable <$> identifier
 
+look :: Parser Expr
+look = do
+    reserved "Look"
+    return Look
+
+xPos :: Parser Expr
+xPos = do
+    reserved "XPosition"
+    return XPosition
+
+yPos :: Parser Expr
+yPos = do
+    reserved "YPosition"
+    return YPosition
+
+direction :: Parser Expr
+direction = do
+    reserved "Direction"
+    return Direction
+
+
 term :: Parser Expr
 term =
     intConst

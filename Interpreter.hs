@@ -6,6 +6,7 @@ import Prelude hiding (lookup, insert)
 import Data.Map
 import Control.Monad
 import Control.Monad.Trans.State ( StateT(StateT), runState, evalStateT, execStateT )
+import WarGame
 
 data Expr = Const Constant
     | Variable String
@@ -38,42 +39,11 @@ data Stmt = Assign String Expr
     | PunchStmt
     deriving Show
 
-data Move = PunchMove | TurnLeftMove | TurnRightMove | MoveMove | NoMove deriving Show
-
 type Heap = Map String Constant
 
-data Memory = Memory Heap Move deriving Show
+data Memory = Memory {heap :: Heap, move :: Move, index :: Index} deriving Show
 
 data Constant =  IntConst Integer | BoolConst Bool | None deriving (Show, Ord, Eq)
-
-type Position = (Integer, Integer)
-
-type Direction = Integer
-
-type Board = [[Integer]]
-
-data Game = Game {
-    board :: Board,
-    direction :: Direction,
-    player1Pos :: Position,
-    player2Pos :: Position
-    }
-
-
--- #################### Game related functions ####################
-
-
-emptyGame :: Game
-emptyGame = Game {board=emptyBoard, direction=1, player1Pos=(0, 0), player2Pos=(3, 3)}
-
-emptyBoard :: Board
-emptyBoard =
-    let
-        a = replicate 4 0;
-        c = [1, 0, 0, -1]
-        b = replicate 4 a;
-    in c : b;
-
 
 -- #################### Constant related functions ####################
 
@@ -145,16 +115,16 @@ constLessEq = ifEitherIsNoneThenNothing (\x y -> BoolConst $ constToInt x <= con
 -- #################### Memory related functions ####################
 
 
-emptyMemory :: Memory
-emptyMemory = Memory empty NoMove
+emptyMemory :: Index -> Memory
+emptyMemory = Memory empty NoMove 
 
 insertM :: String -> Constant -> StateT Memory Maybe ()
-insertM k v = StateT $ \(Memory s m) -> Just ((), Memory (insert k v s) m)
+insertM k v = StateT $ \(Memory s m i) -> Just ((), Memory (insert k v s) m i)
 
 lookupM :: String -> StateT Memory Maybe Constant
-lookupM k = StateT $ \(Memory s m) -> let (const, state) = (fromMaybe None (lookup k s), s)
+lookupM k = StateT $ \(Memory s m i) -> let (const, state) = (fromMaybe None (lookup k s), s)
     in if const == None then Nothing
-        else Just (const, Memory s m)
+        else Just (const, Memory s m i)
 
 evalPairOfExpr :: Game -> (Expr, Expr) -> StateT Memory Maybe (Constant, Constant)
 evalPairOfExpr game (x, y) = do
@@ -166,28 +136,24 @@ returnMaybe :: Maybe Constant -> StateT Memory Maybe Constant
 returnMaybe x = StateT $ \s -> if isNothing x then Nothing else Just (fromMaybe None x, s)
 
 putMove :: Move -> StateT Memory Maybe ()
-putMove move = StateT $ \(Memory s m) -> Just ((), Memory s move)
+putMove move = StateT $ \(Memory s m i) -> Just ((), Memory s move i)
 
 getXPosition :: Game -> StateT Memory Maybe Constant
-getXPosition game = StateT $ \s -> let (x, y) = player1Pos game in Just (IntConst x, s)
+getXPosition game = StateT $ \(Memory s m i) -> let (x, y) = getPos i game in
+    Just (IntConst x, Memory s m i)
+
 
 getYPosition :: Game -> StateT Memory Maybe Constant
-getYPosition game = StateT $ \s -> let (x, y) = player1Pos game in Just (IntConst y, s)
+getYPosition game = StateT $ \(Memory s m i) -> let (x, y) = getPos i game in
+    Just (IntConst y, Memory s m i)
 
 getDirection :: Game -> StateT Memory Maybe Constant
-getDirection game = StateT $ \s -> let d = direction game in Just (IntConst d, s)
+getDirection game = StateT $ \(Memory s m i) -> let d = getDir i game in
+    Just (IntConst d, Memory s m i)
 
-getLook :: Game -> StateT Memory Maybe Constant
-getLook game = StateT $ \s -> case () of
-    _ | d == 1 && x1 == x2 && y1 - y2 > 0 -> Just (IntConst $ y1 - y2, s)
-      | d == 3 && x1 == x2 && y1 - y2 < 0 -> Just (IntConst $ y2 - y1, s)
-      | d == 2 && y1 == y2 && x1 - x2 < 0 -> Just (IntConst $ x2 - x1, s)
-      | d == 4 && y1 == y2 && x1 - x2 > 0 -> Just (IntConst $ x1 - x2, s)
-      | otherwise -> Just (IntConst (-1), s)
-    where
-        (x1, y1) = player1Pos game
-        (x2, y2) = player2Pos game
-        d = direction game
+getLookDist :: Game -> StateT Memory Maybe Constant
+getLookDist game = StateT $ \(Memory s m i) -> let dist = getLook i game in
+    Just (IntConst dist, Memory s m i)
 
 
 -- #################### Expression evaluation ####################
@@ -249,7 +215,7 @@ eval game exp = case exp of
         do
             r0 <- eval game x
             returnMaybe (constNot r0)
-    Look -> getLook game
+    Look -> getLookDist game
     XPosition -> getXPosition game
     YPosition -> getYPosition game
     Direction -> getDirection game
@@ -305,4 +271,4 @@ test game = do
     r0 <- interpret game testStatement
     return ()
 
-printTest = execStateT (test emptyGame) emptyMemory
+-- printTest = execStateT (test emptyGame) emptyMemory
