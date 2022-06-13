@@ -200,7 +200,13 @@ isAlive p = health p > 0
 
 
 getSquareInDirection :: Position -> Direction -> Game -> Maybe Position
-getSquareInDirection (x, y) d g = if resX >= boardSize || resY >= boardSize || resX < 0 || resY < 0 then Nothing else Just (resX, resY)
+getSquareInDirection (x, y) d g = if
+    resX >= boardSize ||
+    resY >= boardSize ||
+    resX < 0 || resY < 0 ||
+    (resX, resY) == position (player1 g) ||
+    (resX, resY) == position (player2 g)
+    then Nothing else Just (resX, resY)
     where
         boardSize = getBoardSize g
         (dx, dy)
