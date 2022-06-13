@@ -19,13 +19,28 @@ getMemory i s = if i == 1 then memory1 s else memory2 s
 getCode :: Index -> GameMemory -> Stmt
 getCode i s = if i == 1 then code1 s else code2 s
 
+getMove :: Index -> GameMemory -> Move
+getMove i gm = m
+    where (Memory _ m _) = getMemory i gm
+
 setMemory :: Index -> Memory -> GameMemory -> GameMemory
 setMemory i m (GameMemory g m1 m2 c1 c2) = if i == 1
     then GameMemory g m m2 c1 c2
     else GameMemory g m1 m c1 c2
 
+setGame :: Game -> GameMemory -> GameMemory
+setGame g (GameMemory _g m1 m2 c1 c2) = GameMemory g m1 m2 c1 c2
+
 code :: IO String
 code = readFile "code.wars"
+
+applyMoves :: StateT GameMemory Maybe ()
+applyMoves = StateT $ \s -> let
+    move1 = getMove 1 s
+    move2 = getMove 2 s
+    oldGame = game s
+    newGame = processMoves (move1, move2) oldGame
+    in Just ((), setGame newGame s)
 
 runCode :: Index -> StateT GameMemory Maybe ()
 runCode i = StateT $ \s -> let
@@ -43,6 +58,7 @@ runGame :: StateT GameMemory Maybe ()
 runGame = do
     runCode 1
     runCode 2
+    applyMoves
 
 run :: GameMemory -> IO ()
 run state = do
@@ -55,7 +71,15 @@ run state = do
                 putStr $ show stateOfGame
                 if isFinished stateOfGame
                     then putStr $ printWinner stateOfGame
-                    else run newState
+                    else do
+                        let mem1 = memory1 newState
+                            mem2 = memory2 newState
+                        putStr $ show mem1
+                        putStr "\n"
+                        putStr $ show mem2
+                        putStr "\n"
+                        getLine
+                        run newState
 
 main :: IO ()
 main = do
@@ -63,7 +87,7 @@ main = do
     c1 <- readFile f1
     c2 <- readFile f2
     let state = GameMemory {
-        game = newGame 3 10 0 (0, 0) (2, 2) 5,
+        game = newGame 2 20 0 (0, 0) (1, 1) 4,
         memory1 = emptyMemory 1,
         memory2 = emptyMemory 2,
         code1 = parseString c1,

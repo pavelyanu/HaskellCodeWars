@@ -1,0 +1,23 @@
+If (x == None || x == 0) {
+	x = 1;
+	If (Look > 0) {
+		If (Look == 1) {
+			Punch;	
+		} Else {
+			Move;
+		};
+	} Else {
+		TurnLeft;	
+	};
+} Else {
+	x = 0;
+	If (Look > 0) {
+		If (Look == 1) {
+			Punch;	
+		} Else {
+			Move;
+		};
+	} Else {
+		Move;	
+	};
+};

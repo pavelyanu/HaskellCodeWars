@@ -103,7 +103,10 @@ constLess :: Constant -> Constant -> Maybe Constant
 constLess = ifEitherIsNoneThenNothing (\x y -> BoolConst $ constToInt x < constToInt y)
 
 constEqual :: Constant -> Constant -> Maybe Constant
-constEqual = ifEitherIsNoneThenNothing (\x y -> BoolConst $ constToInt x == constToInt y)
+constEqual x y
+    | x == None && y == None = Just $ BoolConst True
+    | x == None || y == None = Just $ BoolConst False
+    | otherwise = Just (BoolConst $ constToInt x == constToInt y)
 
 constGreaterEq :: Constant -> Constant -> Maybe Constant
 constGreaterEq = ifEitherIsNoneThenNothing (\x y -> BoolConst $ constToInt x >= constToInt y)
@@ -123,8 +126,7 @@ insertM k v = StateT $ \(Memory s m i) -> Just ((), Memory (insert k v s) m i)
 
 lookupM :: String -> StateT Memory Maybe Constant
 lookupM k = StateT $ \(Memory s m i) -> let (const, state) = (fromMaybe None (lookup k s), s)
-    in if const == None then Nothing
-        else Just (const, Memory s m i)
+    in Just (const, Memory s m i)
 
 evalPairOfExpr :: Game -> (Expr, Expr) -> StateT Memory Maybe (Constant, Constant)
 evalPairOfExpr game (x, y) = do

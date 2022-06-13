@@ -161,11 +161,13 @@ processMovement actor move g = updateOnePlayer pl actor g
             NoMove -> p
 
 processMoves :: (Move, Move) -> Game -> Game
-processMoves (m1, m2) g = case (m1, m2) of
-    (PunchMove, PunchMove) -> processPunchMove 2 (processPunchMove 1 g)
-    (PunchMove, move2) -> processMovement 2 move2 (processPunchMove 1 g)
-    (move1, PunchMove) -> processMovement 1 move1 (processPunchMove 2 g)
-    (move1, move2) -> processMovement 1 move1 (processMovement 2 move2 g)
+processMoves (m1, m2) g = incrementTime g'
+    where
+        g' = case (m1, m2) of
+            (PunchMove, PunchMove) -> processPunchMove 2 (processPunchMove 1 g)
+            (PunchMove, move2) -> processMovement 2 move2 (processPunchMove 1 g)
+            (move1, PunchMove) -> processMovement 1 move1 (processPunchMove 2 g)
+            (move1, move2) -> processMovement 1 move1 (processMovement 2 move2 g)
 
 
 -- #################### Interacting with Player ####################
@@ -247,4 +249,5 @@ instance Show Game where
         ++ show (player1 g)
         ++ "\n"
         ++ show (player2 g)
+        ++ "\n"
 

@@ -9,10 +9,11 @@ import Data.Functor.Identity
 import Interpreter
 import Text.Parsec.Language (emptyDef)
 import Text.Parsec.String (Parser)
+import Prelude hiding (sequence)
 
 names =
     words
-    "True False If Then Else While Look XPosition YPosition Direction TurnRight TurnLeft Move Punch"
+    "True False If Then Else While Look XPosition YPosition Direction TurnRight TurnLeft Move Punch None"
 
 opNames = words "&& || ! + - * / = < <= > >= =="
 
@@ -68,6 +69,11 @@ boolConst =
 variable :: Parser Expr
 variable = Variable <$> identifier
 
+none :: Parser Expr
+none = do
+    reserved "None"
+    return (Const None)
+
 look :: Parser Expr
 look = do
     reserved "Look"
@@ -88,10 +94,17 @@ direction = do
     reserved "Direction"
     return Direction
 
+func :: Parser Expr
+func = look
+    <|> xPos
+    <|> yPos
+    <|> direction
+    <|> none
 
 term :: Parser Expr
 term =
     intConst
+    <|> func
     <|> boolConst
     <|> variable
     <|> parens expression
@@ -102,19 +115,18 @@ expression = buildExpressionParser operationTable term <|> term
 assignment :: Parser Stmt
 assignment = do
     v0 <- identifier
-    reservedOp "=="
+    reservedOp "="
     Assign v0 <$> expression
 
-seq :: Parser Stmt
-seq = do
-    s0 <- stmt
+sequence :: Parser Stmt
+sequence = do
+    s0 <- simpleStmt
     Seq s0 <$> stmt
 
 condition :: Parser Stmt
 condition = do
     reserved "If"
     e0 <- parens expression
-    reserved "Then"
     s0 <- between (reserved "{") (reserved "}") stmt
     reserved "Else"
     s1 <- between (reserved "{") (reserved "}") stmt
@@ -135,17 +147,17 @@ turnLeftStmt = do
 turnRightStmt :: Parser Stmt
 turnRightStmt = do
     reserved "TurnRight"
-    return TurnLeftStmt
+    return TurnRightStmt
 
 moveStmt :: Parser Stmt
 moveStmt = do
     reserved "Move"
-    return TurnLeftStmt
+    return MoveStmt
 
 punchStmt :: Parser Stmt
 punchStmt = do
     reserved "Punch"
-    return TurnLeftStmt
+    return PunchStmt
 
 simpleStmt :: Parser Stmt
 simpleStmt = do
@@ -154,17 +166,14 @@ simpleStmt = do
         <|> turnRightStmt
         <|> moveStmt
         <|> punchStmt
+        <|> while
+        <|> condition
     semi
     return s0
 
-complexStmt :: Parser Stmt
-complexStmt =
-    while
-    <|> condition
-    <|> Parser.seq
-
 stmt :: Parser Stmt
-stmt = simpleStmt <|> complexStmt
+stmt = do
+    try sequence <|> simpleStmt
 
 parser = whiteSpace >> stmt
 
