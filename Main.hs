@@ -87,7 +87,7 @@ main = do
     c1 <- readFile f1
     c2 <- readFile f2
     let state = GameMemory {
-        game = newGame 2 20 0 (0, 0) (1, 1) 4,
+        game = newGame 2 (read duration) 0 (0, 0) (1, 1) 4,
         memory1 = emptyMemory 1,
         memory2 = emptyMemory 2,
         code1 = parseString c1,
