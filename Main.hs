@@ -83,11 +83,13 @@ run state = do
 
 main :: IO ()
 main = do
-    f1 : f2 : duration : _ <- getArgs
+    f1 : f2 : duration : size' : _ <- getArgs
     c1 <- readFile f1
     c2 <- readFile f2
-    let state = GameMemory {
-        game = newGame 2 (read duration) 0 (0, 0) (1, 1) 4,
+    let
+        size = read size'
+        state = GameMemory {
+        game = newGame (read size') (read duration) 0 (0, 0) (size - 1, size - 1) 4,
         memory1 = emptyMemory 1,
         memory2 = emptyMemory 2,
         code1 = parseString c1,
