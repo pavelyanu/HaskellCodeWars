@@ -20,8 +20,10 @@ data Expr = Const Constant
 
 data Stmt = Assign String Expr
     | Seq Stmt Stmt
-    | Condition Expr Stmt Stmt
+    | IfElse Expr Stmt Stmt
+    | If Expr Stmt
     | While Expr Stmt
+    -- | End
     | TurnLeftStmt
     | TurnRightStmt
     | MoveStmt
@@ -130,7 +132,6 @@ getLookDist :: Game -> StateT Memory Maybe Constant
 getLookDist game = StateT $ \(Memory s m i) -> let dist = getLook i game in
     Just (IntConst dist, Memory s m i)
 
-
 -- #################### Expression evaluation ####################
 
 
@@ -165,15 +166,20 @@ interpret game stmt = case stmt of
             insertM n r0
     Seq x y ->
         do
-            r0 <- interpret game x
-            r1 <- interpret game y
+            interpret game x
+            interpret game y
             return ()
-    Condition e x y ->
+    IfElse e x y ->
         do
             r0 <- eval game e
             if constToBool r0
                 then interpret game x
                 else interpret game y
+    If e x ->
+        do
+            r0 <- eval game e
+            when (constToBool r0) $ do
+                interpret game x
     While e x ->
         let loop () = do
             r0 <- eval game e

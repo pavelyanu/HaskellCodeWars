@@ -1,23 +1,31 @@
-If (x == None || x == 0) {
-	x = 1;
-	If (Look > 0) {
-		If (Look == 1) {
-			Punch;	
-		} Else {
-			Move;
-		};
-	} Else {
-		TurnRight;	
-	};
-} Else {
+if (x == None) {	
 	x = 0;
-	If (Look > 0) {
-		If (Look == 1) {
-			Punch;	
-		} Else {
+	TurnLeft;
+}
+if (Look == 1) {
+	Punch;
+} else {
+	if (Look > 0) {
+		Move;
+	} else {
+		if (x == 0) {
+			TurnLeft;
+		}
+		if (x == 2) {
+			TurnLeft;
+		}
+		if (x == 3) {
+			TurnLeft;
+		}
+		if (x == 4 || x == 5) {
 			Move;
-		};
-	} Else {
-		Move;	
-	};
-};
+		}
+		if (x == 6) {
+			TurnRight;
+		}
+		x = x + 1;
+	}
+}
+if (x > 6) {
+	x = 3;
+}

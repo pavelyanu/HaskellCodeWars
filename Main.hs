@@ -31,9 +31,6 @@ setMemory i m (GameMemory g m1 m2 c1 c2) = if i == 1
 setGame :: Game -> GameMemory -> GameMemory
 setGame g (GameMemory _g m1 m2 c1 c2) = GameMemory g m1 m2 c1 c2
 
-code :: IO String
-code = readFile "code.wars"
-
 applyMoves :: StateT GameMemory Maybe ()
 applyMoves = StateT $ \s -> let
     move1 = getMove 1 s

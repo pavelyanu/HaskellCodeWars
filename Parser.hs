@@ -13,7 +13,7 @@ import Prelude hiding (sequence)
 
 names =
     words
-    "True False If Then Else While Look XPosition YPosition Direction TurnRight TurnLeft Move Punch None"
+    "True False if else while Look XPosition YPosition Direction TurnRight TurnLeft Move Punch None"
 
 opNames = words "&& || ! + - * / = < <= > >= =="
 
@@ -123,18 +123,28 @@ sequence = do
     s0 <- simpleStmt
     Seq s0 <$> stmt
 
-condition :: Parser Stmt
-condition = do
-    reserved "If"
+ifElse :: Parser Stmt
+ifElse = do
+    reserved "if"
     e0 <- parens expression
     s0 <- between (reserved "{") (reserved "}") stmt
-    reserved "Else"
+    reserved "else"
     s1 <- between (reserved "{") (reserved "}") stmt
-    return (Condition e0 s0 s1)
+    return (IfElse e0 s0 s1)
+
+ifCondition :: Parser Stmt
+ifCondition = do
+    reserved "if"
+    e0 <- parens expression
+    s0 <- between (reserved "{") (reserved "}") stmt
+    return (If e0 s0)
+
+condition:: Parser Stmt
+condition = try ifElse <|> ifCondition
 
 while :: Parser Stmt
 while = do
-    reserved "While"
+    reserved "while"
     e0 <- parens expression
     s0 <- between (reserved "{") (reserved "}") stmt
     return (While e0 s0)
@@ -159,17 +169,21 @@ punchStmt = do
     reserved "Punch"
     return PunchStmt
 
-simpleStmt :: Parser Stmt
-simpleStmt = do
+oneLineStmt :: Parser Stmt
+oneLineStmt = do
     s0 <- assignment
         <|> turnLeftStmt
         <|> turnRightStmt
         <|> moveStmt
         <|> punchStmt
-        <|> while
-        <|> condition
     semi
     return s0
+
+simpleStmt :: Parser Stmt
+simpleStmt = do
+    oneLineStmt
+        <|> while
+        <|> condition
 
 stmt :: Parser Stmt
 stmt = do

@@ -175,7 +175,12 @@ processMoves (m1, m2) g = incrementTime g'
 
 movePlayer :: Player -> Game -> Player
 movePlayer (Player i d p h) g = Player i d newPos h
-    where newPos = fromMaybe p (getSquareInDirection p d g)
+    where
+        newPos' = fromMaybe p (getSquareInDirection p d g)
+        enemyPos = getOppositePlayer i g
+        newPos = if newPos' == position enemyPos
+            then p
+            else newPos'
 
 turnPlayerLeft :: Player -> Player
 turnPlayerLeft (Player i d p h) = Player i newDir p h 
@@ -203,9 +208,7 @@ getSquareInDirection :: Position -> Direction -> Game -> Maybe Position
 getSquareInDirection (x, y) d g = if
     resX >= boardSize ||
     resY >= boardSize ||
-    resX < 0 || resY < 0 ||
-    (resX, resY) == position (player1 g) ||
-    (resX, resY) == position (player2 g)
+    resX < 0 || resY < 0
     then Nothing else Just (resX, resY)
     where
         boardSize = getBoardSize g
