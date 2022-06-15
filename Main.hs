@@ -45,10 +45,10 @@ runCode i = StateT $ \s -> let
     code = getCode i s
     g = game s
     maybeNewMemory = execStateT (interpret g code) memory
-    in 
+    in
         if isNothing maybeNewMemory
             then Nothing
-            else let newMemory = fromJust maybeNewMemory 
+            else let newMemory = fromJust maybeNewMemory
             in Just ((), setMemory i newMemory s)
 
 runGame :: StateT GameMemory Maybe ()
@@ -78,9 +78,38 @@ run state = do
                         getLine
                         run newState
 
+runSilently :: GameMemory -> IO Integer
+runSilently state = do
+    let maybeNewState = execStateT runGame state
+        in if isNothing maybeNewState
+            then error "Game memory is Nothing"
+            else do
+                let newState = fromJust maybeNewState
+                let stateOfGame = game newState
+                if isFinished stateOfGame
+                    then return $ getWinner stateOfGame
+                    else do
+                        let mem1 = memory1 newState
+                            mem2 = memory2 newState
+                        runSilently newState
+
+runSimulation :: GameMemory -> Integer -> Integer -> Integer -> IO (Integer, Integer)
+runSimulation state rounds c1 c2 = do
+    if rounds == 0 then return (c1, c2)
+        else do
+            winner <- runSilently state
+            let (newC1, newC2) = case winner of 
+                    1 -> (c1 + 1, c2)
+                    2 -> (c1, c2 + 1)
+                    _ -> (c1, c2)
+            if winner == 0
+                then putStr "No one won\n"
+                else putStr ("Player " ++ show winner ++ " has won the round\n")
+            runSimulation state (rounds - 1) newC1 newC2
+
 main :: IO ()
 main = do
-    f1 : f2 : duration : size' : _ <- getArgs
+    f1 : f2 : duration : size' : rest <- getArgs
     c1 <- readFile f1
     c2 <- readFile f2
     let
@@ -92,5 +121,10 @@ main = do
         code1 = parseString c1,
         code2 = parseString c2
         }
-        in run state
+        in if null rest then run state
+            else do
+                let rounds = read (head rest)
+                (r1, r2) <- runSimulation state rounds 0 0
+                putStr "Results of the simulation are:\n"
+                putStr ("Player 1: " ++ show r1 ++ ", Player 2: " ++ show r2)
 

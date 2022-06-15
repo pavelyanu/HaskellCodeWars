@@ -107,6 +107,12 @@ printWinner g
     | timeUp g = "Time's up. (ʘᗩʘ')"
     | otherwise = "Game is not finished yet"
 
+getWinner :: Game -> Integer
+getWinner g
+    | (isAlive $ player1 g) && not (isAlive $ player2 g) = 1
+    | not (isAlive $ player1 g) && (isAlive $ player2 g) = 2
+    | otherwise = 0
+
 getBoardSize :: Game -> BoardSize
 getBoardSize g = toInteger $ length b
     where Board b = board g
