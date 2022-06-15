@@ -10,19 +10,8 @@ import WarGame
 
 data Expr = Const Constant
     | Variable String
-    | Minus Expr Expr
-    | UMinus Expr
-    | Plus Expr Expr
-    | Times Expr Expr
-    | Div Expr Expr
-    | Greater Expr Expr
-    | GreaterEq Expr Expr
-    | Less Expr Expr
-    | LessEq Expr Expr
-    | Equal Expr Expr
-    | And Expr Expr
-    | Or Expr Expr
-    | Not Expr
+    | UnOp Op Expr
+    | BinOp Op Expr Expr
     | Look
     | XPosition
     | YPosition
@@ -45,8 +34,27 @@ data Memory = Memory {heap :: Heap, move :: Move, index :: Index} deriving Show
 
 data Constant =  IntConst Integer | BoolConst Bool | None deriving (Show, Ord, Eq)
 
+data Op = UMinus | Plus | Minus | Times | Div | Greater | GreaterEq | Less | LessEq | Equal | And | Or | Not deriving (Show, Ord, Eq)
+
 -- #################### Constant related functions ####################
 
+unOpTable = fromList [
+    (UMinus, \x -> IntConst (constToInt x * (-1))),
+    (Not, BoolConst . not . constToBool)
+    ]
+
+binOpTable = fromList [
+    (Plus, \x y -> fromIntegerToConst (constToInt x + constToInt y)),
+    (Minus, \x y -> fromIntegerToConst (constToInt x - constToInt y)),
+    (Times, \x y -> fromIntegerToConst (constToInt x * constToInt y)),
+    (Div, \x y -> IntConst $ constToInt x `div` constToInt y),
+    (Greater, \x y -> BoolConst $ constToInt x > constToInt y),
+    (GreaterEq, \x y -> BoolConst $ constToInt x >= constToInt y),
+    (Less, \x y -> BoolConst $ constToInt x < constToInt y),
+    (LessEq, \x y -> BoolConst $ constToInt x <= constToInt y),
+    (And, \x y -> BoolConst $ constToBool x && constToBool y),
+    (Or, \x y -> BoolConst $ constToBool x || constToBool y)
+    ]
 
 constToInt :: Constant -> Integer
 constToInt x = case x of
@@ -60,8 +68,8 @@ constToBool x = case x of
     BoolConst a -> a
     None -> False
 
-fromInt :: Integer -> Constant
-fromInt = IntConst
+fromIntegerToConst :: Integer -> Constant
+fromIntegerToConst = IntConst
 
 eitherIsNone :: Constant -> Constant -> Bool
 eitherIsNone x y = x == None || y == None
@@ -72,35 +80,8 @@ isNone x = x == None
 ifEitherIsNoneThenNothing :: (Constant -> Constant -> Constant) -> Constant -> Constant -> Maybe Constant
 ifEitherIsNoneThenNothing f x y = if eitherIsNone x y then Nothing else Just $ f x y
 
-constPlus :: Constant -> Constant -> Maybe Constant
-constPlus = ifEitherIsNoneThenNothing (\x y -> fromInt (constToInt x + constToInt y))
-
-constTimes :: Constant -> Constant -> Maybe Constant
-constTimes = ifEitherIsNoneThenNothing (\x y -> fromInt (constToInt x * constToInt y))
-
-constMinus :: Constant -> Constant -> Maybe Constant
-constMinus = ifEitherIsNoneThenNothing (\x y -> fromInt (constToInt x - constToInt y))
-
-constUMinus :: Constant -> Maybe Constant
-constUMinus x = if isNone x then Nothing else Just $ IntConst (constToInt x * (-1))
-
-constOr :: Constant -> Constant -> Maybe Constant
-constOr = ifEitherIsNoneThenNothing (\x y -> BoolConst $ constToBool x || constToBool y)
-
-constAnd :: Constant -> Constant -> Maybe Constant
-constAnd = ifEitherIsNoneThenNothing (\x y -> BoolConst $ constToBool x && constToBool y)
-
-constNot :: Constant -> Maybe Constant
-constNot x = if isNone x then Nothing else Just $ BoolConst $ not $ constToBool x
-
-constDiv :: Constant -> Constant -> Maybe Constant
-constDiv = ifEitherIsNoneThenNothing (\x y -> IntConst $ constToInt x `div` constToInt y)
-
-constGreater :: Constant -> Constant -> Maybe Constant
-constGreater = ifEitherIsNoneThenNothing (\x y -> BoolConst $ constToInt x > constToInt y)
-
-constLess :: Constant -> Constant -> Maybe Constant
-constLess = ifEitherIsNoneThenNothing (\x y -> BoolConst $ constToInt x < constToInt y)
+ifNoneThenNothing :: (Constant -> Constant) -> Constant -> Maybe Constant
+ifNoneThenNothing f x = if isNone x then Nothing else Just $ f x
 
 constEqual :: Constant -> Constant -> Maybe Constant
 constEqual x y
@@ -108,18 +89,11 @@ constEqual x y
     | x == None || y == None = Just $ BoolConst False
     | otherwise = Just (BoolConst $ constToInt x == constToInt y)
 
-constGreaterEq :: Constant -> Constant -> Maybe Constant
-constGreaterEq = ifEitherIsNoneThenNothing (\x y -> BoolConst $ constToInt x >= constToInt y)
-
-constLessEq :: Constant -> Constant -> Maybe Constant
-constLessEq = ifEitherIsNoneThenNothing (\x y -> BoolConst $ constToInt x <= constToInt y)
-
-
 -- #################### Memory related functions ####################
 
 
 emptyMemory :: Index -> Memory
-emptyMemory = Memory empty NoMove 
+emptyMemory = Memory empty NoMove
 
 insertM :: String -> Constant -> StateT Memory Maybe ()
 insertM k v = StateT $ \(Memory s m i) -> Just ((), Memory (insert k v s) m i)
@@ -144,7 +118,6 @@ getXPosition :: Game -> StateT Memory Maybe Constant
 getXPosition game = StateT $ \(Memory s m i) -> let (x, y) = getPos i game in
     Just (IntConst x, Memory s m i)
 
-
 getYPosition :: Game -> StateT Memory Maybe Constant
 getYPosition game = StateT $ \(Memory s m i) -> let (x, y) = getPos i game in
     Just (IntConst y, Memory s m i)
@@ -165,58 +138,16 @@ eval :: Game -> Expr -> StateT Memory Maybe Constant
 eval game exp = case exp of
     Const x -> return x
     Variable x -> lookupM x
-    Minus x y ->
+    BinOp op x y->
         do
             (r0, r1) <- evalPairOfExpr game (x, y)
-            returnMaybe (constMinus r0 r1)
-    UMinus x ->
+            if op == Equal
+                then returnMaybe (constEqual r0 r1)
+                else returnMaybe (ifEitherIsNoneThenNothing (fromJust (lookup op binOpTable)) r0 r1)
+    UnOp op x ->
         do
             r0 <- eval game x
-            returnMaybe (constUMinus r0)
-    Plus x y ->
-        do
-            (r0, r1) <- evalPairOfExpr game (x, y)
-            returnMaybe (constPlus r0 r1)
-    Times x y ->
-        do
-            (r0, r1) <- evalPairOfExpr game (x, y)
-            returnMaybe (constTimes r0 r1)
-    Div x y ->
-        do
-            (r0, r1) <- evalPairOfExpr game (x, y)
-            returnMaybe (constDiv r0 r1)
-    Greater x y ->
-        do
-            (r0, r1) <- evalPairOfExpr game (x, y)
-            returnMaybe (constGreater r0 r1)
-    GreaterEq x y ->
-        do
-            (r0, r1) <- evalPairOfExpr game (x, y)
-            returnMaybe (constGreaterEq r0 r1)
-    Less x y ->
-        do
-            (r0, r1) <- evalPairOfExpr game (x, y)
-            returnMaybe (constLess r0 r1)
-    LessEq x y ->
-        do
-            (r0, r1) <- evalPairOfExpr game (x, y)
-            returnMaybe (constLessEq r0 r1)
-    Equal x y ->
-        do
-            (r0, r1) <- evalPairOfExpr game (x, y)
-            returnMaybe (constEqual r0 r1)
-    And x y ->
-        do
-            (r0, r1) <- evalPairOfExpr game (x, y)
-            returnMaybe (constAnd r0 r1)
-    Or x y ->
-        do
-            (r0, r1) <- evalPairOfExpr game (x, y)
-            returnMaybe (constOr r0 r1)
-    Not x ->
-        do
-            r0 <- eval game x
-            returnMaybe (constNot r0)
+            returnMaybe (ifNoneThenNothing (fromJust (lookup op unOpTable)) r0)
     Look -> getLookDist game
     XPosition -> getXPosition game
     YPosition -> getYPosition game
@@ -254,23 +185,3 @@ interpret game stmt = case stmt of
     TurnRightStmt -> putMove TurnRightMove
     MoveStmt -> putMove MoveMove
     PunchStmt -> putMove PunchMove
-
-
--- #################### Testing ####################
-
-
-testExpression = Equal
-    (Greater (Variable "x") (Const $ IntConst 5))
-    (Const $ BoolConst False)
-
-testStatement = Seq
-    (Assign "x" (Const $ IntConst 0))
-    (While (Not $ Equal (Variable "x") (Const $ IntConst 5)) (Assign "x" (Plus (Variable "x") (Const $ IntConst 1))))
-
-
-test :: Game -> StateT Memory Maybe ()
-test game = do
-    r0 <- interpret game testStatement
-    return ()
-
--- printTest = execStateT (test emptyGame) emptyMemory

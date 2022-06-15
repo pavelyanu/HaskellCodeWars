@@ -39,23 +39,23 @@ comma         = Token.comma         lexer
 whiteSpace    = Token.whiteSpace    lexer
 
 operationTable = [
-    [ Prefix (reservedOp "-" >> return UMinus) ],
-    [ Prefix (reservedOp "!" >> return Not) ],
+    [ Prefix (reservedOp "-" >> return (UnOp UMinus)) ],
+    [ Prefix (reservedOp "!" >> return (UnOp Not)) ],
     [
-        Infix (reservedOp "*" >> return Times) AssocLeft,
-        Infix (reservedOp "/" >> return Div) AssocLeft
+        Infix (reservedOp "*" >> return (BinOp Times)) AssocLeft,
+        Infix (reservedOp "/" >> return (BinOp Div)) AssocLeft
     ],
     [
-        Infix (reservedOp "+" >> return Plus) AssocLeft,
-        Infix (reservedOp "-" >> return Minus) AssocLeft
+        Infix (reservedOp "+" >> return (BinOp Plus)) AssocLeft,
+        Infix (reservedOp "-" >> return (BinOp Minus)) AssocLeft
     ],
-    [ Infix (reservedOp "==" >> return Equal) AssocLeft ],
-    [ Infix (reservedOp "<" >> return Less) AssocLeft ],
-    [ Infix (reservedOp "<=" >> return LessEq) AssocLeft ],
-    [ Infix (reservedOp ">" >> return Greater) AssocLeft ],
-    [ Infix (reservedOp ">=" >> return GreaterEq) AssocLeft ],
-    [ Infix (reservedOp "&&" >> return And) AssocLeft ],
-    [ Infix (reservedOp "||" >> return Or) AssocLeft ]
+    [ Infix (reservedOp "==" >> return (BinOp Equal)) AssocLeft ],
+    [ Infix (reservedOp "<" >> return (BinOp Less)) AssocLeft ],
+    [ Infix (reservedOp "<=" >> return (BinOp LessEq)) AssocLeft ],
+    [ Infix (reservedOp ">" >> return (BinOp Greater)) AssocLeft ],
+    [ Infix (reservedOp ">=" >> return (BinOp GreaterEq)) AssocLeft ],
+    [ Infix (reservedOp "&&" >> return (BinOp And)) AssocLeft ],
+    [ Infix (reservedOp "||" >> return (BinOp Or)) AssocLeft ]
     ]
 
 intConst :: Parser Expr
