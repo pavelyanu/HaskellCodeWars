@@ -36,7 +36,7 @@ data Memory = Memory {heap :: Heap, move :: Move, index :: Index} deriving Show
 
 data Constant =  IntConst Integer | BoolConst Bool | None deriving (Show, Ord, Eq)
 
-data Op = UMinus | Plus | Minus | Times | Div | Greater | GreaterEq | Less | LessEq | Equal | And | Or | Not deriving (Show, Ord, Eq)
+data Op = UMinus | Plus | Minus | Times | Div | Mod | Greater | GreaterEq | Less | LessEq | Equal | And | Or | Not deriving (Show, Ord, Eq)
 
 -- #################### Constant related functions ####################
 
@@ -50,6 +50,7 @@ binOpTable = fromList [
     (Minus, \x y -> fromIntegerToConst (constToInt x - constToInt y)),
     (Times, \x y -> fromIntegerToConst (constToInt x * constToInt y)),
     (Div, \x y -> IntConst $ constToInt x `div` constToInt y),
+    (Mod, \x y -> IntConst $ constToInt x `mod` constToInt y),
     (Greater, \x y -> BoolConst $ constToInt x > constToInt y),
     (GreaterEq, \x y -> BoolConst $ constToInt x >= constToInt y),
     (Less, \x y -> BoolConst $ constToInt x < constToInt y),

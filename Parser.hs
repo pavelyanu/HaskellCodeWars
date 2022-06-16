@@ -15,7 +15,7 @@ names =
     words
     "True False if else while Look XPosition YPosition Direction TurnRight TurnLeft Move Punch None"
 
-opNames = words "&& || ! + - * / = < <= > >= =="
+opNames = words "&& || ! + - * / % = < <= > >= =="
 
 lexerConfig = emptyDef {
     Token.commentStart = "/*",
@@ -43,7 +43,8 @@ operationTable = [
     [ Prefix (reservedOp "!" >> return (UnOp Not)) ],
     [
         Infix (reservedOp "*" >> return (BinOp Times)) AssocLeft,
-        Infix (reservedOp "/" >> return (BinOp Div)) AssocLeft
+        Infix (reservedOp "/" >> return (BinOp Div)) AssocLeft,
+        Infix (reservedOp "%" >> return (BinOp Mod)) AssocLeft
     ],
     [
         Infix (reservedOp "+" >> return (BinOp Plus)) AssocLeft,
