@@ -109,13 +109,15 @@ runSimulation state rounds c1 c2 = do
 
 main :: IO ()
 main = do
-    f1 : f2 : duration : size' : rest <- getArgs
+    args <- getArgs
+    if length args < 4 then printHelp else do
+    let (f1 : f2 : duration : size' : rest) = args
     c1 <- readFile f1
     c2 <- readFile f2
     let
         size = read size'
         state = GameMemory {
-        game = newGame (read size') (read duration) 0 (0, 0) (size - 1, size - 1) 4,
+        game = newGame size (read duration) 0 (0, 0) (size - 1, size - 1) 4,
         memory1 = emptyMemory 1,
         memory2 = emptyMemory 2,
         code1 = parseString c1,
@@ -128,3 +130,8 @@ main = do
                 putStr "Results of the simulation are:\n"
                 putStr ("Player 1: " ++ show r1 ++ ", Player 2: " ++ show r2 ++ "\n")
 
+printHelp :: IO ()
+printHelp = do
+    putStr ("Correct arguments are:\n"
+        ++ "[player1 code] [player2 code] [time limit] [board size] [optional number of rounds to simulate]\n")
+    return ()
