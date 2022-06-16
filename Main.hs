@@ -126,5 +126,5 @@ main = do
                 let rounds = read (head rest)
                 (r1, r2) <- runSimulation state rounds 0 0
                 putStr "Results of the simulation are:\n"
-                putStr ("Player 1: " ++ show r1 ++ ", Player 2: " ++ show r2)
+                putStr ("Player 1: " ++ show r1 ++ ", Player 2: " ++ show r2 ++ "\n")
 
