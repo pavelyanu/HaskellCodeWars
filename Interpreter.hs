@@ -5,11 +5,13 @@ import Data.Maybe
 import Prelude hiding (lookup, insert)
 import Data.Map
 import Control.Monad
-import Control.Monad.Trans.State ( StateT(StateT), runState, evalStateT, execStateT )
+import Control.Monad.Trans.State ( StateT(StateT), runState, evalStateT, execStateT, get, gets, modify )
+import System.Random
 import WarGame
 
 data Expr = Const Constant
     | Variable String
+    | Rand
     | UnOp Op Expr
     | BinOp Op Expr Expr
     | Look
@@ -32,7 +34,9 @@ data Stmt = Assign String Expr
 
 type Heap = Map String Constant
 
-data Memory = Memory {heap :: Heap, move :: Move, index :: Index} deriving Show
+type Seed = Integer
+
+data Memory = Memory {heap :: Heap, move :: Move, index :: Index, seed :: Seed} deriving Show
 
 data Constant =  IntConst Integer | BoolConst Bool | None deriving (Show, Ord, Eq)
 
@@ -95,15 +99,18 @@ constEqual x y
 -- #################### Memory related functions ####################
 
 
-emptyMemory :: Index -> Memory
+emptyMemory :: Index -> Seed -> Memory
 emptyMemory = Memory empty NoMove
 
+setSeed :: Seed -> Memory -> Memory
+setSeed newSeed (Memory h m i s) = Memory h m i newSeed
+
 insertM :: String -> Constant -> StateT Memory Maybe ()
-insertM k v = StateT $ \(Memory s m i) -> Just ((), Memory (insert k v s) m i)
+insertM k v = StateT $ \(Memory h m i s) -> Just ((), Memory (insert k v h) m i s)
 
 lookupM :: String -> StateT Memory Maybe Constant
-lookupM k = StateT $ \(Memory s m i) -> let (const, state) = (fromMaybe None (lookup k s), s)
-    in Just (const, Memory s m i)
+lookupM k = StateT $ \(Memory h m i s) -> let const = fromMaybe None (lookup k h)
+    in Just (const, Memory h m i s)
 
 evalPairOfExpr :: Game -> (Expr, Expr) -> StateT Memory Maybe (Constant, Constant)
 evalPairOfExpr game (x, y) = do
@@ -115,23 +122,30 @@ returnMaybe :: Maybe Constant -> StateT Memory Maybe Constant
 returnMaybe x = StateT $ \s -> if isNothing x then Nothing else Just (fromMaybe None x, s)
 
 putMove :: Move -> StateT Memory Maybe ()
-putMove move = StateT $ \(Memory s m i) -> Just ((), Memory s move i)
+putMove move = StateT $ \(Memory h m i s) -> Just ((), Memory h move i s)
+
+evalRandom :: StateT Memory Maybe Constant
+evalRandom = do
+    seed <- gets seed
+    let (r, _) = random (mkStdGen $ fromEnum seed) in do
+    _ <- modify $ setSeed (seed + 1)
+    return $ IntConst r
 
 getXPosition :: Game -> StateT Memory Maybe Constant
-getXPosition game = StateT $ \(Memory s m i) -> let (x, y) = getPos i game in
-    Just (IntConst x, Memory s m i)
+getXPosition game = StateT $ \(Memory h m i s) -> let (x, y) = getPos i game in
+    Just (IntConst x, Memory h m i s)
 
 getYPosition :: Game -> StateT Memory Maybe Constant
-getYPosition game = StateT $ \(Memory s m i) -> let (x, y) = getPos i game in
-    Just (IntConst y, Memory s m i)
+getYPosition game = StateT $ \(Memory h m i s) -> let (x, y) = getPos i game in
+    Just (IntConst y, Memory h m i s)
 
 getDirection :: Game -> StateT Memory Maybe Constant
-getDirection game = StateT $ \(Memory s m i) -> let d = getDir i game in
-    Just (IntConst d, Memory s m i)
+getDirection game = StateT $ \(Memory h m i s) -> let d = getDir i game in
+    Just (IntConst d, Memory h m i s)
 
 getLookDist :: Game -> StateT Memory Maybe Constant
-getLookDist game = StateT $ \(Memory s m i) -> let dist = getLook i game in
-    Just (IntConst dist, Memory s m i)
+getLookDist game = StateT $ \(Memory h m i s) -> let dist = getLook i game in
+    Just (IntConst dist, Memory h m i s)
 
 -- #################### Expression evaluation ####################
 
@@ -140,6 +154,7 @@ eval :: Game -> Expr -> StateT Memory Maybe Constant
 eval game exp = case exp of
     Const x -> return x
     Variable x -> lookupM x
+    Rand -> evalRandom
     BinOp op x y->
         do
             (r0, r1) <- evalPairOfExpr game (x, y)

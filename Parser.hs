@@ -13,7 +13,7 @@ import Prelude hiding (sequence)
 
 names =
     words
-    "True False if else while Look XPosition YPosition Direction TurnRight TurnLeft Move Punch None"
+    "True False if else while Look XPosition YPosition Direction TurnRight TurnLeft Move Punch None Random"
 
 opNames = words "&& || ! + - * / % = < <= > >= =="
 
@@ -80,6 +80,11 @@ look = do
     reserved "Look"
     return Look
 
+rand :: Parser Expr
+rand = do
+    reserved "Random"
+    return Rand
+
 xPos :: Parser Expr
 xPos = do
     reserved "XPosition"
@@ -101,6 +106,7 @@ func = look
     <|> yPos
     <|> direction
     <|> none
+    <|> rand
 
 term :: Parser Expr
 term =

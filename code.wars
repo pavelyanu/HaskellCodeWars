@@ -1,0 +1,9 @@
+If (Look > 0) Then {
+    If (Look > 1) Then {
+        Move;
+    } Else {
+        Punch;
+    }
+} Else {
+    TurnLeft;
+}

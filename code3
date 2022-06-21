@@ -1,0 +1,24 @@
+x = Random % 7;
+if (Look == 1) {
+	Punch;
+} else {
+	if (Look > 0) {
+		Move;
+	} else {
+		if (x == 0) {
+			TurnLeft;
+		}
+		if (x == 2) {
+			TurnLeft;
+		}
+		if (x == 3) {
+			TurnLeft;
+		}
+		if (x == 4 || x == 5) {
+			Move;
+		}
+		if (x == 6) {
+			TurnRight;
+		}
+	}
+}

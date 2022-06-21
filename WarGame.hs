@@ -51,8 +51,8 @@ emptyBoard _ 0 = Board []
 emptyBoard width hight = Board (replicate (fromEnum width) 0 : remainder)
     where (Board remainder) = emptyBoard width (hight - 1)
 
-newGame :: BoardSize -> MaxTime -> CurrentTime -> Position -> Position -> Health -> Game
-newGame size maxT curT pos1 pos2 hlth = Game {
+newGame :: BoardSize -> MaxTime -> CurrentTime -> Position -> Direction -> Position -> Direction -> Health -> Game
+newGame size maxT curT pos1 dir1 pos2 dir2 hlth = Game {
     board = brd,
     player1 = pl1,
     player2 = pl2,
@@ -61,8 +61,8 @@ newGame size maxT curT pos1 pos2 hlth = Game {
     }
     where
         brd0 = emptyBoard size size
-        pl1 = defaultPlayer 1 hlth pos1
-        pl2 = defaultPlayer 2 hlth pos2
+        pl1 = Player{index=1, direction=dir1, position=pos1, health=hlth}
+        pl2 = Player{index=2, direction=dir2, position=pos2, health=hlth}
         brd = placePlayerOnBoard pl2 (placePlayerOnBoard pl1 brd0)
 
 
@@ -199,6 +199,9 @@ turnPlayerRigth (Player i d p h) = Player i newDir p h
     where
         newDir' = (d + 1) `mod` 5
         newDir = if newDir' == 0 then 1 else newDir'
+
+setDirection :: Player -> Direction -> Player
+setDirection (Player i d p h) dir = Player i dir p h
 
 damagePlayer :: Player -> Damage -> Player
 damagePlayer (Player i d p h) damage = Player i d p (h - damage)
