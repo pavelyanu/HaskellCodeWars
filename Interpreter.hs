@@ -5,7 +5,7 @@ import Data.Maybe
 import Prelude hiding (lookup, insert)
 import Data.Map
 import Control.Monad
-import Control.Monad.Trans.State ( StateT(StateT), runState, evalStateT, execStateT, get, gets, modify )
+import Control.Monad.Trans.State ( StateT(StateT), runState, evalStateT, execStateT, get, gets, modify, put )
 import System.Random
 import WarGame
 
@@ -35,6 +35,8 @@ data Stmt = Assign String Expr
 type Heap = Map String Constant
 
 type Seed = Integer
+
+type StMemory t = StateT Memory Maybe t
 
 data Memory = Memory {heap :: Heap, move :: Move, index :: Index, seed :: Seed} deriving Show
 
@@ -105,52 +107,66 @@ emptyMemory = Memory empty NoMove
 setSeed :: Seed -> Memory -> Memory
 setSeed newSeed (Memory h m i s) = Memory h m i newSeed
 
-insertM :: String -> Constant -> StateT Memory Maybe ()
-insertM k v = StateT $ \(Memory h m i s) -> Just ((), Memory (insert k v h) m i s)
+insertM :: String -> Constant -> StMemory ()
+insertM k v = do
+    (Memory h m i s) <- get
+    put $ Memory (insert k v h) m i s
 
-lookupM :: String -> StateT Memory Maybe Constant
+lookupM :: String -> StMemory Constant
 lookupM k = StateT $ \(Memory h m i s) -> let const = fromMaybe None (lookup k h)
     in Just (const, Memory h m i s)
 
-evalPairOfExpr :: Game -> (Expr, Expr) -> StateT Memory Maybe (Constant, Constant)
+evalPairOfExpr :: Game -> (Expr, Expr) -> StMemory (Constant, Constant)
 evalPairOfExpr game (x, y) = do
     r0 <- eval game x
     r1 <- eval game y
     return (r0, r1)
 
-returnMaybe :: Maybe Constant -> StateT Memory Maybe Constant
-returnMaybe x = StateT $ \s -> if isNothing x then Nothing else Just (fromMaybe None x, s)
+returnMaybe :: Maybe Constant -> StMemory Constant
+returnMaybe x = do
+    s <- get
+    if isNothing x then return None else return (fromMaybe None x)
 
-putMove :: Move -> StateT Memory Maybe ()
-putMove move = StateT $ \(Memory h m i s) -> Just ((), Memory h move i s)
+putMove :: Move -> StMemory ()
+putMove move = do
+    s <- get
+    put (Memory (heap s) move (Interpreter.index s) (seed s))
 
-evalRandom :: StateT Memory Maybe Constant
+evalRandom :: StMemory Constant
 evalRandom = do
     seed <- gets seed
     let (r, _) = random (mkStdGen $ fromEnum seed) in do
     _ <- modify $ setSeed (seed + 1)
     return $ IntConst r
 
-getXPosition :: Game -> StateT Memory Maybe Constant
-getXPosition game = StateT $ \(Memory h m i s) -> let (x, y) = getPos i game in
-    Just (IntConst x, Memory h m i s)
+getXPosition :: Game -> StMemory Constant
+getXPosition game = do
+    s <- get
+    let (x, y) = getPos (Interpreter.index s) game
+    return $ IntConst x
 
-getYPosition :: Game -> StateT Memory Maybe Constant
-getYPosition game = StateT $ \(Memory h m i s) -> let (x, y) = getPos i game in
-    Just (IntConst y, Memory h m i s)
+getYPosition :: Game -> StMemory Constant
+getYPosition game = do
+    s <- get
+    let (x, y) = getPos (Interpreter.index s) game
+    return $ IntConst y
 
-getDirection :: Game -> StateT Memory Maybe Constant
-getDirection game = StateT $ \(Memory h m i s) -> let d = getDir i game in
-    Just (IntConst d, Memory h m i s)
+getDirection :: Game -> StMemory Constant
+getDirection game = do
+    s <- get
+    let d = getDir (Interpreter.index s) game
+    return $ IntConst d
 
-getLookDist :: Game -> StateT Memory Maybe Constant
-getLookDist game = StateT $ \(Memory h m i s) -> let dist = getLook i game in
-    Just (IntConst dist, Memory h m i s)
+getLookDist :: Game -> StMemory Constant
+getLookDist game = do
+    s <- get
+    let dist = getLook (Interpreter.index s) game
+    return $ IntConst dist
 
 -- #################### Expression evaluation ####################
 
 
-eval :: Game -> Expr -> StateT Memory Maybe Constant
+eval :: Game -> Expr -> StMemory Constant
 eval game exp = case exp of
     Const x -> return x
     Variable x -> lookupM x
@@ -174,7 +190,7 @@ eval game exp = case exp of
 -- #################### Statement interpretation ####################
 
 
-interpret :: Game -> Stmt -> StateT Memory Maybe ()
+interpret :: Game -> Stmt -> StMemory ()
 interpret game stmt = case stmt of
     Assign n e ->
         do
