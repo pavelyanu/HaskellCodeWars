@@ -42,7 +42,21 @@ data Memory = Memory {heap :: Heap, move :: Move, index :: Index, seed :: Seed} 
 
 data Constant =  IntConst Integer | BoolConst Bool | None deriving (Show, Ord, Eq)
 
-data Op = UMinus | Plus | Minus | Times | Div | Mod | Greater | GreaterEq | Less | LessEq | Equal | And | Or | Not deriving (Show, Ord, Eq)
+data Op = UMinus
+    | Plus
+    | Minus
+    | Times
+    | Div
+    | Mod
+    | Greater
+    | GreaterEq
+    | Less
+    | LessEq
+    | Equal
+    | And
+    | Or
+    | Not deriving (Show, Ord, Eq)
+
 
 -- #################### Constant related functions ####################
 
@@ -52,9 +66,9 @@ unOpTable = fromList [
     ]
 
 binOpTable = fromList [
-    (Plus, \x y -> fromIntegerToConst (constToInt x + constToInt y)),
-    (Minus, \x y -> fromIntegerToConst (constToInt x - constToInt y)),
-    (Times, \x y -> fromIntegerToConst (constToInt x * constToInt y)),
+    (Plus, \x y -> IntConst (constToInt x + constToInt y)),
+    (Minus, \x y -> IntConst (constToInt x - constToInt y)),
+    (Times, \x y -> IntConst (constToInt x * constToInt y)),
     (Div, \x y -> IntConst $ constToInt x `div` constToInt y),
     (Mod, \x y -> IntConst $ constToInt x `mod` constToInt y),
     (Greater, \x y -> BoolConst $ constToInt x > constToInt y),
@@ -76,9 +90,6 @@ constToBool x = case x of
     IntConst a -> a /= 0
     BoolConst a -> a
     None -> False
-
-fromIntegerToConst :: Integer -> Constant
-fromIntegerToConst = IntConst
 
 eitherIsNone :: Constant -> Constant -> Bool
 eitherIsNone x y = x == None || y == None
@@ -136,8 +147,8 @@ evalRandom :: StMemory Constant
 evalRandom = do
     seed <- gets seed
     let (r, _) = random (mkStdGen $ fromEnum seed) in do
-    _ <- modify $ setSeed (seed + 1)
-    return $ IntConst r
+        _ <- modify $ setSeed (seed + 1)
+        return $ IntConst r
 
 getXPosition :: Game -> StMemory Constant
 getXPosition game = do
@@ -214,8 +225,8 @@ interpret game stmt = case stmt of
                 interpret game x
     While e x ->
         let loop () = do
-            r0 <- eval game e
-            when (constToBool r0) $ do
+                r0 <- eval game e
+                when (constToBool r0) $ do 
                     interpret game x
                     loop ()
         in loop ()

@@ -39,10 +39,10 @@ randomizeGame (GameMemory g m1' m2' c1 c2) seed =
         gen1 = mkStdGen $ fromEnum seed
         (dir1, gen2) = random gen1
         (dir2, _) = random gen2
-        p1 = setDirection (player1 g) dir1
-        p2 = setDirection (player2 g) dir2
+        p1 = setDirection (player1 g) (dir1 `mod`  5 + 1)
+        p2 = setDirection (player2 g) (dir2 `mod` 5 + 1)
         m1 = setSeed seed m1'
-        m2 = setSeed seed m2'
+        m2 = setSeed (seed + 1) m2'
     in GameMemory (updateGame p1 p2 g) m1 m2 c1 c2 
 
 makeGameMemory :: Stmt -> Stmt -> BoardSize -> MaxTime -> Seed -> GameMemory
@@ -53,7 +53,7 @@ makeGameMemory c1 c2 size duration seed =
         in GameMemory {
             game = newGame size duration 0 (0, 0) d1 (size - 1, size - 1) d2 4,
             memory1 = emptyMemory 1 seed,
-            memory2 = emptyMemory 2 seed,
+            memory2 = emptyMemory 2 (seed + 1),
             code1 = c1,
             code2 = c2
             }
@@ -139,7 +139,7 @@ main = do
         (seed, sim) = case rest of
             (seed' : sim' : _) -> (read seed', read sim')
             (seed' : _) -> (read seed', 0)
-            _ -> (toInteger (fromEnum $ utctDayTime time), 0)
+            _ -> (toInteger (fromEnum $ utctDayTime time) `mod` 10000, 0)
         code1 = parseString c1
         code2 = parseString c2
         state = makeGameMemory code1 code2 size duration seed
@@ -148,7 +148,15 @@ main = do
                 let rounds = sim
                 (r1, r2) <- runSimulation state seed rounds 0 0
                 putStr "Results of the simulation are:\n"
-                putStr ("Player 1: " ++ show r1 ++ ", Player 2: " ++ show r2 ++ ", No one won: " ++ show (rounds - r1 - r2) ++ "\n")
+                putStr (
+                    "Player 1: "
+                    ++ show r1
+                    ++ ", Player 2: "
+                    ++ show r2 ++
+                    ", No one won: "
+                    ++ show (rounds - r1 - r2)
+                    ++ "\n"
+                    )
 
 printHelp :: IO ()
 printHelp = do
