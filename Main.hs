@@ -42,7 +42,7 @@ randomizeGame (GameMemory g m1' m2' c1 c2) seed =
         p1 = setDirection (player1 g) (dir1 `mod`  5 + 1)
         p2 = setDirection (player2 g) (dir2 `mod` 5 + 1)
         m1 = setSeed seed m1'
-        m2 = setSeed (seed + 1) m2'
+        m2 = setSeed ((seed + 1) * 2) m2'
     in GameMemory (updateGame p1 p2 g) m1 m2 c1 c2 
 
 makeGameMemory :: Stmt -> Stmt -> BoardSize -> MaxTime -> Seed -> GameMemory
@@ -53,7 +53,7 @@ makeGameMemory c1 c2 size duration seed =
         in GameMemory {
             game = newGame size duration 0 (0, 0) d1 (size - 1, size - 1) d2 4,
             memory1 = emptyMemory 1 seed,
-            memory2 = emptyMemory 2 (seed + 1),
+            memory2 = emptyMemory 2 ((seed + 1) * 2),
             code1 = c1,
             code2 = c2
             }

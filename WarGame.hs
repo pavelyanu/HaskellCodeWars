@@ -201,7 +201,7 @@ turnPlayerRight (Player i d p h) = Player i newDir p h
         newDir = if newDir' == 0 then 1 else newDir'
 
 setDirection :: Player -> Direction -> Player
-setDirection (Player i d p h) dir = Player i dir p h
+setDirection player dir = player {direction = dir}
 
 damagePlayer :: Player -> Damage -> Player
 damagePlayer (Player i d p h) damage = Player i d p (h - damage)
