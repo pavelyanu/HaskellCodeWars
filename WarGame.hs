@@ -162,7 +162,7 @@ processMovement actor move g = updateOnePlayer pl actor g
         pl = case move of
             MoveMove -> movePlayer p g
             TurnLeftMove -> turnPlayerLeft p
-            TurnRightMove -> turnPlayerRigth p
+            TurnRightMove -> turnPlayerRight p
             PunchMove -> p
             NoMove -> p
 
@@ -194,8 +194,8 @@ turnPlayerLeft (Player i d p h) = Player i newDir p h
         newDir' = (d - 1) `mod` 5
         newDir = if newDir' == 0 then 4 else newDir'
 
-turnPlayerRigth :: Player -> Player
-turnPlayerRigth (Player i d p h) = Player i newDir p h 
+turnPlayerRight :: Player -> Player
+turnPlayerRight (Player i d p h) = Player i newDir p h 
     where
         newDir' = (d + 1) `mod` 5
         newDir = if newDir' == 0 then 1 else newDir'
