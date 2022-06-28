@@ -134,9 +134,7 @@ evalPairOfExpr game (x, y) = do
     return (r0, r1)
 
 returnMaybe :: Maybe Constant -> StMemory Constant
-returnMaybe x = do
-    s <- get
-    if isNothing x then return None else return (fromMaybe None x)
+returnMaybe x = StateT $ \s -> if isNothing x then Nothing else Just (fromMaybe None x, s)
 
 putMove :: Move -> StMemory ()
 putMove move = do
