@@ -34,7 +34,7 @@ data Stmt = Assign String Expr
 
 type Heap = Map String Constant
 
-type Seed = Integer
+type Seed = StdGen
 
 type StMemory t = StateT Memory Maybe t
 
@@ -144,8 +144,8 @@ putMove move = do
 evalRandom :: StMemory Constant
 evalRandom = do
     seed <- gets seed
-    let (r, _) = random (mkStdGen $ fromEnum seed) in do
-        _ <- modify $ setSeed (seed + 1)
+    let (r, newSeed) = random seed in do
+        _ <- modify $ setSeed newSeed
         return $ IntConst r
 
 getXPosition :: Game -> StMemory Constant

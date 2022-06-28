@@ -6,6 +6,7 @@ import System.Environment (getArgs)
 import Data.Maybe
 import System.Random
 import Data.Time.Clock
+import GHC.Integer (Integer)
 
 data GameMemory = GameMemory {
     game :: Game,
@@ -33,27 +34,37 @@ setMemory i m (GameMemory g m1 m2 c1 c2) = if i == 1
 setGame :: Game -> GameMemory -> GameMemory
 setGame g (GameMemory _g m1 m2 c1 c2) = GameMemory g m1 m2 c1 c2
 
+random' :: (RandomGen g) => g -> (Integer, g)
+random' = random
+
 randomizeGame :: GameMemory -> Seed -> GameMemory
-randomizeGame (GameMemory g m1' m2' c1 c2) seed = 
+randomizeGame (GameMemory g m1' m2' c1 c2) seed =
     let
-        gen1 = mkStdGen $ fromEnum seed
-        (dir1, gen2) = random gen1
-        (dir2, _) = random gen2
+        (dir1, gen1) = random seed
+        (dir2, gen2) = random gen1
         p1 = setDirection (player1 g) (dir1 `mod`  5 + 1)
         p2 = setDirection (player2 g) (dir2 `mod` 5 + 1)
-        m1 = setSeed seed m1'
-        m2 = setSeed ((seed + 1) * 2) m2'
-    in GameMemory (updateGame p1 p2 g) m1 m2 c1 c2 
+        m1 = setSeed gen1 m1'
+        m2 = setSeed gen2 m2'
+    in GameMemory (updateGame p1 p2 g) m1 m2 c1 c2
 
-makeGameMemory :: Stmt -> Stmt -> BoardSize -> MaxTime -> Seed -> GameMemory
-makeGameMemory c1 c2 size duration seed = 
+makeListOfSeeds :: Integer -> Integer -> [StdGen]
+makeListOfSeeds len start =
+    let
+        (seed, seeds) = foldl (\(seed, seeds) _ -> let
+            (_, nextSeed) = random' seed
+            in (nextSeed, nextSeed : seeds)) (mkStdGen 0, []) [start..len]
+    in seeds
+
+makeGameMemory :: Stmt -> Stmt -> BoardSize -> MaxTime -> Integer -> GameMemory
+makeGameMemory c1 c2 size duration seed =
         let
-            (d1, _) = random (mkStdGen $ fromEnum seed)
-            (d2, _) = random (mkStdGen (fromEnum seed + 1))
+            (d1, gen1) = random (mkStdGen $ fromEnum seed)
+            (d2, gen2) = random gen1
         in GameMemory {
             game = newGame size duration 0 (0, 0) (d1 `mod` 5 + 1) (size - 1, size - 1) (d2 `mod` 5 + 1) 4,
-            memory1 = emptyMemory 1 seed,
-            memory2 = emptyMemory 2 ((seed + 1) * 2),
+            memory1 = emptyMemory 1 gen1,
+            memory2 = emptyMemory 2 gen2,
             code1 = c1,
             code2 = c2
             }
@@ -111,8 +122,8 @@ runSilently state = case execStateT runGame state of
                     mem2 = memory2 newState
                 runSilently newState
 
-runSimulation :: GameMemory -> Seed -> Integer -> Integer -> Integer -> IO (Integer, Integer)
-runSimulation state seed rounds c1 c2 = do
+runSimulation :: GameMemory -> [Seed] -> Integer -> Integer -> Integer -> IO (Integer, Integer)
+runSimulation state (seed : seeds) rounds c1 c2 = do
     if rounds == 0 then return (c1, c2)
         else do
             winner <- runSilently (randomizeGame state seed)
@@ -123,7 +134,7 @@ runSimulation state seed rounds c1 c2 = do
             if winner == 0
                 then putStr "No one won\n"
                 else putStr ("Player " ++ show winner ++ " has won the round\n")
-            runSimulation state (seed + 1) (rounds - 1) newC1 newC2
+            runSimulation state seeds (rounds - 1) newC1 newC2
 
 main :: IO ()
 main = do
@@ -145,8 +156,8 @@ main = do
         state = makeGameMemory code1 code2 size duration seed
         in if sim == 0 then run state
             else do
-                let rounds = sim
-                (r1, r2) <- runSimulation state seed rounds 0 0
+                let seeds = makeListOfSeeds sim seed
+                (r1, r2) <- runSimulation state seeds sim 0 0
                 putStr "Results of the simulation are:\n"
                 putStr (
                     "Player 1: "
@@ -154,7 +165,7 @@ main = do
                     ++ ", Player 2: "
                     ++ show r2 ++
                     ", No one won: "
-                    ++ show (rounds - r1 - r2)
+                    ++ show (sim - r1 - r2)
                     ++ "\n"
                     )
 
