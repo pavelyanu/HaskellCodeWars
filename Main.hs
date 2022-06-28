@@ -51,7 +51,7 @@ makeGameMemory c1 c2 size duration seed =
             (d1, _) = random (mkStdGen $ fromEnum seed)
             (d2, _) = random (mkStdGen (fromEnum seed + 1))
         in GameMemory {
-            game = newGame size duration 0 (0, 0) d1 (size - 1, size - 1) d2 4,
+            game = newGame size duration 0 (0, 0) (d1 `mod` 5 + 1) (size - 1, size - 1) (d2 `mod` 5 + 1) 4,
             memory1 = emptyMemory 1 seed,
             memory2 = emptyMemory 2 ((seed + 1) * 2),
             code1 = c1,
