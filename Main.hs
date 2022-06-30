@@ -46,7 +46,9 @@ randomizeGame (GameMemory g m1' m2' c1 c2) seed =
         p2 = setDirection (player2 g) (dir2 `mod` 5 + 1)
         m1 = setSeed gen1 m1'
         m2 = setSeed gen2 m2'
-    in GameMemory (updateGame p1 p2 g) m1 m2 c1 c2
+        game' = updateGame p1 p2 g
+        game = game' {currentTime=0}
+    in GameMemory game m1 m2 c1 c2
 
 makeListOfSeeds :: Integer -> Integer -> [StdGen]
 makeListOfSeeds len start =
@@ -116,7 +118,10 @@ runSilently state = case execStateT runGame state of
     Just newState -> do
         let stateOfGame = game newState
         if isFinished stateOfGame
-            then return $ getWinner stateOfGame
+            then do
+                putStr $ printWinner stateOfGame
+                putStr "\n"
+                return $ getWinner stateOfGame
             else do
                 let mem1 = memory1 newState
                     mem2 = memory2 newState
@@ -131,10 +136,9 @@ runSimulation state (seed : seeds) rounds c1 c2 = do
                     1 -> (c1 + 1, c2)
                     2 -> (c1, c2 + 1)
                     _ -> (c1, c2)
-            if winner == 0
-                then putStr "No one won\n"
-                else putStr ("Player " ++ show winner ++ " has won the round\n")
             runSimulation state seeds (rounds - 1) newC1 newC2
+
+runSimulation state [] rounds c1 c2 = return (c1, c2)
 
 main :: IO ()
 main = do
